@@ -1,0 +1,65 @@
+#cloud-config
+# Baked into the template VM's OVF "user-data" property and run exactly once,
+# during the template build (see build-template.sh). Clones never re-run this
+# - cloud-init recognizes the fixed instance-id "id-ovf" as already-seen and
+# skips it, leaving per-clone hostname/IP entirely to the vSphere
+# Customization Specification (a separate mechanism - see ../README.md).
+hostname: k8s-template
+manage_etc_hosts: true
+
+users:
+  - name: vagrant
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+    ssh_authorized_keys:
+      - __VAGRANT_PUBLIC_KEY__
+
+package_update: true
+package_upgrade: true
+packages:
+  - open-vm-tools
+  - qemu-guest-agent
+  # VMware's Linux guest customization - what applies the per-node vSphere
+  # Customization Specification's static IP on a clone's first boot - fails
+  # silently without Perl on the guest (VMware KB 2075048). If it can't run,
+  # nothing ever writes a working netplan config here (see the removal below),
+  # so the clone never gets an IP and `vagrant up` times out waiting for one.
+  - perl
+
+write_files:
+  # Ubuntu's official cloud images ship their own drop-in,
+  # /etc/ssh/sshd_config.d/50-cloud-init.conf, with "PasswordAuthentication
+  # no" baked in. sshd_config keeps the FIRST value it sees per keyword, and
+  # Include (at the very top of the stock sshd_config) reads sshd_config.d/
+  # in alphabetical order - so this file's number has to sort BEFORE "50-"
+  # to actually win, or it's silently overridden. Named 10- for that reason,
+  # not 60-.
+  - path: /etc/ssh/sshd_config.d/10-vagrant.conf
+    content: |
+      PermitRootLogin yes
+      PasswordAuthentication yes
+
+runcmd:
+  - systemctl enable --now open-vm-tools
+  - systemctl restart ssh
+  # chpasswd (not `echo -e ... | passwd`) - runcmd items run under /bin/sh (dash on
+  # Ubuntu), whose builtin echo doesn't support -e, so a piped passwd never got two
+  # clean lines and silently left root locked out. chpasswd also implicitly unlocks
+  # the account since it replaces the password hash outright.
+  - echo "root:__ROOT_PASSWORD__" | chpasswd
+  # cloud-init's own network stage auto-generates this file, matching the interface
+  # by the TEMPLATE's own build-time MAC address. Every vSphere clone gets a fresh,
+  # different MAC, so on a clone this stale match binds to nothing and blocks
+  # netplan from applying the vSphere Customization Specification's static IP
+  # (written separately to /etc/netplan/99-netcfg-vmware.yaml on each clone's first
+  # boot) - the interface is left down with no address. Since cloud-init won't
+  # re-run on clones (fixed instance-id "id-ovf"), deleting it once here, in the
+  # template, is permanent - it never gets regenerated.
+  - rm -f /etc/netplan/50-cloud-init.yaml
+  # NOTE: deliberately NOT calling `cloud-init status --wait` here - runcmd is
+  # itself one of the stages cloud-init waits on, so calling it from inside runcmd
+  # is a self-deadlock: cloud-init can never report done while still running this
+  # script, so status --wait blocks forever and the VM never reaches the line below.
+  - shutdown -h now

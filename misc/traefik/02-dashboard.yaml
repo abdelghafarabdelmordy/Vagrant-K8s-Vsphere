@@ -1,0 +1,52 @@
+# Exposes the Traefik dashboard on the SAME LoadBalancer IP as the ingress
+# itself (port 80, MetalLB VIP - see values.yaml), guarded by HTTP basic
+# auth since there's no hostname restricting who can reach it.
+#
+# This is NOT the values.yaml `ingressRoute.dashboard` toggle (left disabled
+# on purpose) - that one only exposes the dashboard on Traefik's *internal*
+# entrypoint, which is ClusterIP-only and never reachable via the
+# LoadBalancer IP at all. This file is a separate, purpose-built IngressRoute
+# on the "web" entrypoint instead, which IS reachable at
+# http://<EXTERNAL-IP>/dashboard/ (note the trailing slash - Traefik 404s
+# without it).
+#
+# Default credentials: admin / traefik-admin - CHANGE the password before
+# leaving this running anywhere that isn't a throwaway lab. To set a new one:
+#   openssl passwd -apr1 'your-new-password'
+# then replace the `users:` line below with `admin:<that output>` (keep the
+# "admin:" prefix, swap only the hash after it).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: traefik-dashboard-auth
+  namespace: traefik-system
+type: Opaque
+stringData:
+  users: |
+    admin:$apr1$vtSUq3Vy$kFdhKjV3cXMhirSD.gGiY.
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-dashboard-auth
+  namespace: traefik-system
+spec:
+  basicAuth:
+    secret: traefik-dashboard-auth
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard
+  namespace: traefik-system
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+      kind: Rule
+      middlewares:
+        - name: traefik-dashboard-auth
+      services:
+        - name: api@internal
+          kind: TraefikService

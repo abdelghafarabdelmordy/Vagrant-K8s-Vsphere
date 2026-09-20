@@ -1,0 +1,58 @@
+# ==============================================================================
+# Traefik as the cluster's ingress controller, exposed through MetalLB.
+#
+# Replaces ingress-nginx: the Kubernetes project announced ingress-nginx's
+# retirement, with EOL in March 2026 (kubernetes.io/blog/2025/11/11/
+# ingress-nginx-retirement/) - Traefik is one of the project's own suggested
+# replacements. Apply misc/metallb/*.yaml BEFORE this, so a LoadBalancer IP
+# pool already exists for Traefik's Service to draw from.
+# ==============================================================================
+
+deployment:
+  replicas: 1   # bump once you have more than one worker to spread across
+
+service:
+  enabled: true
+  spec:
+    type: LoadBalancer
+    externalTrafficPolicy: Local
+  # Uncomment to pin a specific free IP from the pool in
+  # ../metallb/02_metallb-config.yaml instead of letting MetalLB auto-assign
+  # the next free one:
+  # annotations:
+  #   metallb.io/loadBalancerIPs: "10.10.10.230"
+
+ports:
+  web:
+    port: 8000
+    exposedPort: 80
+    expose:
+      default: true
+  websecure:
+    port: 8443
+    exposedPort: 443
+    expose:
+      default: true
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true   # existing Ingress objects with no ingressClassName route through Traefik
+
+providers:
+  kubernetesIngress:
+    enabled: true
+    publishedService:
+      enabled: true
+  kubernetesCRD:
+    enabled: true   # enables Traefik's native IngressRoute/Middleware CRDs, optional to use
+
+api:
+  # The internal dashboard/API handler (api@internal) - required for
+  # 02-dashboard.yaml's IngressRoute to serve anything at all. Set
+  # explicitly rather than relying on the chart's own default, which has
+  # differed across chart versions.
+  dashboard: true
+
+ingressRoute:
+  dashboard:
+    enabled: false   # chart's own convenience route - stays off, see 02-dashboard.yaml instead

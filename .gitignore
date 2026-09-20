@@ -1,0 +1,13 @@
+# Vagrant's own state
+.vagrant/
+
+# Cluster admin credentials fetched by scripts/install-addons.*  - don't commit these
+.kubeconfig
+
+# Downloaded template artifacts
+template/downloads/
+downloads/
+
+# Packer
+packer/packer_cache/
+packer/*.log

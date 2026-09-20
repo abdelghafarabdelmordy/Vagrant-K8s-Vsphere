@@ -1,0 +1,33 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US
+  keyboard:
+    layout: us
+  identity:
+    hostname: ubuntu-2204-k8s-template
+    username: vagrant
+    # Generate this yourself: `mkpasswd -m sha-512` (apt install whois), then
+    # paste the hash below. Do not reuse a hash from anywhere else.
+    password: "REPLACE_WITH_YOUR_OWN_MKPASSWD_HASH"
+  ssh:
+    install-server: true
+    allow-pw: true
+  storage:
+    layout:
+      name: direct
+  packages:
+    - open-vm-tools
+    - qemu-guest-agent
+    # Required for VMware's Linux guest customization (the vSphere
+    # Customization Specification's static IP application on first boot) to
+    # run at all - silently fails without it (VMware KB 2075048), leaving the
+    # clone with no network config and no IP.
+    - perl
+  late-commands:
+    - echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/vagrant
+    - curl -fsSL https://raw.githubusercontent.com/hashicorp/vagrant/master/keys/vagrant.pub > /target/home/vagrant/.ssh/authorized_keys || true
+    - chroot /target chown -R vagrant:vagrant /home/vagrant/.ssh
+    - chroot /target chmod 700 /home/vagrant/.ssh
+    - chroot /target chmod 600 /home/vagrant/.ssh/authorized_keys
+  shutdown: true
