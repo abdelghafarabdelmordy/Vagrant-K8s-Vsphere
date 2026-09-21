@@ -308,7 +308,7 @@ name needed, since this one routes on path, not host.
   `template/build-template.ps1` for Windows PowerShell (same steps, same
   result) - plus a Packer-based ISO alternative (`packer/`) for anyone who'd
   rather not use the cloud image.
-- Node static IPs (`10.10.10.240` / `.41` / `.42`) now come from a vSphere
+- Node static IPs (`10.10.10.240` / `.241` / `.242`) now come from a vSphere
   Customization Specification per node rather than
   `config.vm.network "private_network"` (vSphere has no equivalent host-only
   network primitive).
