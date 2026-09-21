@@ -226,27 +226,6 @@ next thing to check, not the network settings:
   mismatched name fails the clone at a different step, not this one, but is
   worth ruling out.
 
-### Deploy dynamic NFS volume provisioning
-```
-$ cd misc/nfs-subdir-external-provisioner
-$ cat setup_nfs | vagrant ssh kmaster
-$ cat setup_nfs | vagrant ssh kworker1
-$ cat setup_nfs | vagrant ssh kworker2
-$ kubectl create -f 01-setup-nfs-provisioner.yaml
-
-###### for testing
-$ kubectl create -f 02-test-claim.yaml
-$ kubectl delete -f 02-test-claim.yaml
-```
-PowerShell's `cat`/`type` aliases don't reproduce a file's raw bytes over a
-pipe the way this needs - use `Get-Content -Raw` instead:
-```powershell
-PS> cd misc\nfs-subdir-external-provisioner
-PS> Get-Content -Raw setup_nfs | vagrant ssh kmaster
-PS> Get-Content -Raw setup_nfs | vagrant ssh kworker1
-PS> Get-Content -Raw setup_nfs | vagrant ssh kworker2
-PS> kubectl create -f 01-setup-nfs-provisioner.yaml
-```
 
 ### MetalLB + Traefik (installed automatically - this is what that step does)
 
