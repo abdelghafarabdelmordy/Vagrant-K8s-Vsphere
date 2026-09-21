@@ -122,7 +122,7 @@ editing the file:
 
 | Variable | What it is | Default |
 |---|---|---|
-| `VSPHERE_HOST` / `VSPHERE_USER` / `VSPHERE_PASSWORD` | vCenter connection | `10.10.10.250` / `administrator@vsphere.local` / `URn0t+hE1.` |
+| `VSPHERE_HOST` / `VSPHERE_USER` / `VSPHERE_PASSWORD` | vCenter connection | `10.10.10.250` / `admin@vsphere.local` / `*****` |
 | `VSPHERE_DATACENTER` | vCenter datacenter name | `intl-site` |
 | `VSPHERE_COMPUTE_RESOURCE` | Cluster or standalone ESXi host | `Cluster` **(CHANGE ME)** |
 | `VSPHERE_RESOURCE_POOL` | Resource pool | `Resources` |
